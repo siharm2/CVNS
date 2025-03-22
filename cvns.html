@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <title>Planning Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1a1f37",
+              secondary: "#2563eb",
+            },
+            borderRadius: {
+              none: "0px",
+              sm: "4px",
+              DEFAULT: "8px",
+              md: "12px",
+              lg: "16px",
+              xl: "20px",
+              "2xl": "24px",
+              "3xl": "32px",
+              full: "9999px",
+              button: "8px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :where([class^="ri-"])::before { content: "\f3c2"; }
+      .drag-zone {
+      min-height: 120px;
+      border: 2px dashed rgba(255,255,255,0.2);
+      transition: all 0.3s;
+      }
+      .drag-zone.drag-over {
+      border-color: #2563eb;
+      background: rgba(37,99,235,0.1);
+      }
+      .dragging {
+      opacity: 1;
+      }
+      .staff-card {
+      cursor: move;
+      }
+      .section-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease-out;
+      opacity: 0;
+      pointer-events: none;
+      }
+      .section-content.expanded {
+      max-height: 1000px;
+      opacity: 1;
+      pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body class="bg-primary min-h-screen text-white">
+    <div class="container mx-auto p-6 min-w-[1024px] max-w-[90vw]">
+      <header class="flex items-center justify-between mb-8">
+        <div class="flex-1">
+          <img
+            src="https://static.readdy.ai/image/01cdd919ceccc16231ef3b3916318cad/484d90531039776bd74ffc4ba647a153.png"
+            alt="Logo"
+            class="h-12"
+          />
+        </div>
+        <h1 class="text-[2.3rem] font-bold text-center flex-1">
+          CV / NS Planning Board
+        </h1>
+        <div class="flex items-center gap-4 flex-1 justify-end">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span class="text-sm text-gray-400">Live Updates</span>
+          </div>
+          <div id="clock" class="text-xl font-mono"></div>
+        </div>
+      </header>
+      <div class="flex gap-8 flex-wrap">
+        <!-- Staff Management Sidebar -->
+        <div class="w-72 flex-shrink-0 min-w-[288px]">
+          <div class="bg-[#1e2444] rounded-lg p-4">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold">Available Operators</h2>
+              <div class="flex gap-2">
+                <button
+                  onclick="showAddStaffModal()"
+                  class="w-8 h-8 flex items-center justify-center bg-secondary rounded-button"
+                >
+                  <i class="ri-add-line"></i>
+                </button>
+                <button
+                  onclick="showAddSupportModal()"
+                  class="w-8 h-8 flex items-center justify-center bg-secondary rounded-button"
+                >
+                  <i class="ri-user-add-line"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex gap-2 mb-4">
+              <button
+                onclick="resetBoard()"
+                class="flex-1 h-8 flex items-center justify-center bg-secondary rounded-button text-sm"
+              >
+                <i class="ri-refresh-line mr-1"></i> Reset Board
+              </button>
+              <button
+                onclick="toggleLockPlanning()"
+                class="flex-1 h-8 flex items-center justify-center bg-secondary rounded-button text-sm"
+              >
+                <i class="ri-lock-line mr-1"></i>
+                <span id="lockStatus">Lock Planning</span>
+              </button>
+            </div>
+            <div id="staffList" class="space-y-2">
+              <!-- Staff cards will be dynamically inserted here -->
+            </div>
+          </div>
+        </div>
+        <!-- Main Planning Board -->
+        <div class="flex-1 space-y-8 min-w-[640px]">
+          <!-- Surgical Tech Section -->
+          <div>
+            <div
+              onclick="toggleSection('surgicalTech')"
+              class="flex items-center justify-between bg-[#1e2444] p-4 rounded-lg cursor-pointer"
+            >
+              <h2 class="text-lg font-semibold">Surgical Tech</h2>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div
+              id="surgicalTech"
+              class="section-content expanded mt-4 space-y-4"
+            >
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="surgical-picking">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Picking</div>
+                </div>
+                <div class="drag-zone" data-zone="surgical-ipoint">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">I-Point</div>
+                </div>
+                <div class="drag-zone" data-zone="surgical-packing">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Packing</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="surgical-vas">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">VAS / HAZMAT</div>
+                </div>
+                <div class="drag-zone" data-zone="surgical-pallet-picking">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">
+                    Pallet Picking
+                  </div>
+                </div>
+                <div class="drag-zone" data-zone="surgical-training">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Training</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Small Goods Section -->
+          <div>
+            <div
+              onclick="toggleSection('smallGoods')"
+              class="flex items-center justify-between bg-[#1e2444] p-4 rounded-lg cursor-pointer"
+            >
+              <h2 class="text-lg font-semibold">Small Goods</h2>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div
+              id="smallGoods"
+              class="section-content expanded mt-4 space-y-4"
+            >
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="small-picking">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Picking</div>
+                </div>
+                <div class="drag-zone" data-zone="small-ipoint">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">I-Point</div>
+                </div>
+                <div class="drag-zone" data-zone="small-packing">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Packing</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="small-vas">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">VAS / HAZMAT</div>
+                </div>
+                <div class="drag-zone" data-zone="small-heart-valves">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Heart Valves</div>
+                </div>
+                <div class="drag-zone" data-zone="small-training">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Training</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Long Goods Section -->
+          <div>
+            <div
+              onclick="toggleSection('longGoods')"
+              class="flex items-center justify-between bg-[#1e2444] p-4 rounded-lg cursor-pointer"
+            >
+              <h2 class="text-lg font-semibold">Long Goods</h2>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div id="longGoods" class="section-content expanded mt-4 space-y-4">
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="long-picking">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Picking</div>
+                </div>
+                <div class="drag-zone" data-zone="long-ipoint">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">I-Point</div>
+                </div>
+                <div class="drag-zone" data-zone="long-packing">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Packing</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="long-vas">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">VAS / HAZMAT</div>
+                </div>
+                <div class="drag-zone" data-zone="long-aortic">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Aortic</div>
+                </div>
+                <div class="drag-zone" data-zone="long-training">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Training</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Support Competences Section -->
+          <div>
+            <div
+              onclick="toggleSection('supportComp')"
+              class="flex items-center justify-between bg-[#1e2444] p-4 rounded-lg cursor-pointer"
+            >
+              <h2 class="text-lg font-semibold">Support Competences</h2>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div
+              id="supportComp"
+              class="section-content expanded mt-4 space-y-4"
+            >
+              <div class="grid grid-cols-4 gap-4">
+                <div class="drag-zone" data-zone="support-x4x5">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">X4 / X5</div>
+                </div>
+                <div class="drag-zone" data-zone="support-em7">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">EM7 / BCP</div>
+                </div>
+                <div class="drag-zone" data-zone="support-consolidation">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Consolidation</div>
+                </div>
+                <div class="drag-zone" data-zone="support-check">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">100% Check</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-4 gap-4">
+                <div class="drag-zone" data-zone="support-maintenance">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Maintenance</div>
+                </div>
+                <div class="drag-zone" data-zone="support-waterspider">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Waterspider</div>
+                </div>
+                <div class="drag-zone" data-zone="support-structural">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">
+                    Structural Heart
+                  </div>
+                </div>
+                <div class="drag-zone" data-zone="support-lean">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Lean</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Others Section -->
+          <div>
+            <div
+              onclick="toggleSection('others')"
+              class="flex items-center justify-between bg-[#1e2444] p-4 rounded-lg cursor-pointer"
+            >
+              <h2 class="text-lg font-semibold text-orange-500">Others</h2>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div id="others" class="section-content expanded mt-4">
+              <div class="grid grid-cols-3 gap-4">
+                <div class="drag-zone" data-zone="others-holiday">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Holiday</div>
+                </div>
+                <div class="drag-zone" data-zone="others-sick">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Sick</div>
+                </div>
+                <div class="drag-zone" data-zone="others-support">
+                  <div class="p-3 bg-[#1e2444] rounded-t-lg">Support</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Add Support Modal -->
+    <div
+      id="addSupportModal"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center"
+    >
+      <div class="bg-[#1e2444] p-6 rounded-lg w-96">
+        <h3 class="text-xl font-semibold mb-4">Add New Support</h3>
+        <form id="addSupportForm" class="space-y-4">
+          <div>
+            <label class="block mb-2">Name</label>
+            <input
+              type="text"
+              id="supportName"
+              class="w-full p-2 rounded-button bg-primary border-none"
+              required
+            />
+          </div>
+          <div>
+            <label class="block mb-2">Role</label>
+            <input
+              type="text"
+              id="supportRole"
+              class="w-full p-2 rounded-button bg-primary border-none"
+              value="Support"
+              required
+            />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              onclick="hideAddSupportModal()"
+              class="px-4 py-2 rounded-button bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 rounded-button bg-secondary">
+              Add
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- Add Staff Modal -->
+    <div
+      id="addStaffModal"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center"
+    >
+      <div class="bg-[#1e2444] p-6 rounded-lg w-96">
+        <h3 class="text-xl font-semibold mb-4">Add New Staff</h3>
+        <form id="addStaffForm" class="space-y-4">
+          <div>
+            <label class="block mb-2">Name</label>
+            <input
+              type="text"
+              id="staffName"
+              class="w-full p-2 rounded-button bg-primary border-none"
+              required
+            />
+          </div>
+          <div>
+            <label class="block mb-2">Role</label>
+            <input
+              type="text"
+              id="staffRole"
+              class="w-full p-2 rounded-button bg-primary border-none"
+              value="MDT"
+              required
+            />
+          </div>
+          <div>
+            <label class="block mb-2">Photo</label>
+            <input
+              type="file"
+              id="staffPhoto"
+              accept="image/*"
+              class="w-full p-2 rounded-button bg-primary border-none"
+            />
+            <div
+              id="photoPreview"
+              class="mt-2 w-20 h-20 rounded-full bg-gray-700 hidden"
+            ></div>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              onclick="hideAddStaffModal()"
+              class="px-4 py-2 rounded-button bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 rounded-button bg-secondary">
+              Add
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+      // Mock data for staff members
+      let staffMembers = [
+        { id: 1, name: "John Doe", role: "MDT", photo: null, assigned: false },
+        { id: 2, name: "Jane Smith", role: "MDT", photo: null, assigned: false },
+        { id: 3, name: "Mike Johnson", role: "MDT", photo: null, assigned: false },
+        { id: 4, name: "Sarah Williams", role: "MDT", photo: null, assigned: false },
+        { id: 5, name: "David Brown", role: "MDT", photo: null, assigned: false },
+      ];
+      let isLocked = false;
+      const PLANNING_PASSWORD = "CVNS2025";
+      // Initialize the page
+      function init() {
+        renderStaffList();
+        setupDragAndDrop();
+        updateClock();
+        setInterval(updateClock, 1000);
+        setupModals();
+      }
+      function setupModals() {
+        document
+          .getElementById("addSupportForm")
+          .addEventListener("submit", function (e) {
+            e.preventDefault();
+            const name = document.getElementById("supportName").value;
+            const role = document.getElementById("supportRole").value;
+            const newStaff = {
+              id: staffMembers.length + 1,
+              name: name,
+              role: role,
+              photo: null,
+              assigned: false,
+            };
+            staffMembers.push(newStaff);
+            renderStaffList();
+            setupDragAndDrop();
+            hideAddSupportModal();
+            this.reset();
+          });
+      }
+      function showAddSupportModal() {
+        document.getElementById("addSupportModal").style.display = "flex";
+      }
+      function hideAddSupportModal() {
+        document.getElementById("addSupportModal").style.display = "none";
+      }
+      function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("en-US", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        document.getElementById("clock").textContent = timeStr;
+      }
+      function toggleLockPlanning() {
+        if (isLocked) {
+          const password = prompt("Enter password to unlock planning:");
+          if (password === PLANNING_PASSWORD) {
+            isLocked = false;
+            document.getElementById("lockStatus").textContent = "Lock Planning";
+          } else {
+            alert("Incorrect password");
+          }
+        } else {
+          isLocked = true;
+          document.getElementById("lockStatus").textContent = "Unlock Planning";
+        }
+      }
+      function resetBoard() {
+        if (isLocked) {
+          alert("Planning is locked. Unlock it first.");
+          return;
+        }
+        const confirmation = confirm("Are you sure you want to reset the board?");
+        if (confirmation) {
+          document.querySelectorAll(".drag-zone .staff-card").forEach((card) => {
+            const staffId = card.dataset.staffId;
+            const staff = staffMembers.find((s) => s.id === parseInt(staffId));
+            if (staff) {
+              staff.assigned = false;
+            }
+            card.remove();
+          });
+          renderStaffList();
+        }
+      }
+      // Render staff list
+      function renderStaffList() {
+        const staffList = document.getElementById("staffList");
+        staffList.innerHTML = staffMembers
+          .filter((staff) => !staff.assigned)
+          .map(
+            (staff) => `
+      <div class="staff-card bg-[#242b4e] p-3 rounded-lg flex items-center justify-between"
+      draggable="true" data-staff-id="${staff.id}">
+      <div class="flex items-center gap-3">
+      ${
+        staff.photo
+          ? `<img src="${staff.photo}" class="w-8 h-8 rounded-full object-cover">`
+          : `<div class="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+      ${staff.name.charAt(0)}
+      </div>`
+      }
+      <div>
+      <div class="font-medium">${staff.name}</div>
+      <div class="text-sm text-gray-400">${staff.role}</div>
+      </div>
+      </div>
+      <button onclick="event.stopPropagation(); deleteStaff(${staff.id})" class="text-gray-400 hover:text-red-500">
+      <i class="ri-delete-bin-line"></i>
+      </button>
+      </div>
+      `,
+          )
+          .join("");
+      }
+      // Setup drag and drop
+      function setupDragAndDrop() {
+        const staffCards = document.querySelectorAll(".staff-card");
+        const dropZones = document.querySelectorAll(".drag-zone");
+        staffCards.forEach((card) => {
+          card.addEventListener("dragstart", handleDragStart);
+          card.addEventListener("dragend", handleDragEnd);
+        });
+        dropZones.forEach((zone) => {
+          zone.addEventListener("dragover", handleDragOver);
+          zone.addEventListener("dragleave", handleDragLeave);
+          zone.addEventListener("drop", handleDrop);
+        });
+      }
+      // Drag and drop handlers
+      function handleDragStart(e) {
+        e.target.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", e.target.dataset.staffId);
+      }
+      function handleDragEnd(e) {
+        e.target.classList.remove("dragging");
+      }
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.target.closest(".drag-zone").classList.add("drag-over");
+      }
+      function handleDragLeave(e) {
+        e.target.closest(".drag-zone").classList.remove("drag-over");
+      }
+      function handleDrop(e) {
+        e.preventDefault();
+        if (isLocked) {
+          alert("Planning is locked. Unlock it first.");
+          return;
+        }
+        const zone = e.target.closest(".drag-zone");
+        zone.classList.remove("drag-over");
+        const staffId = parseInt(e.dataTransfer.getData("text/plain"));
+        const staff = staffMembers.find((s) => s.id === staffId);
+        if (!staff) return;
+        // Remove the staff card from any previous zone and unassign staff
+        const existingCard = document.querySelector(`[data-staff-id="${staffId}"]`);
+        if (existingCard) {
+          existingCard.remove();
+          staff.assigned = false;
+        }
+        // Remove from staff list if coming from there
+        const staffListCard = document.querySelector(
+          `#staffList [data-staff-id="${staffId}"]`,
+        );
+        if (staffListCard) {
+          staffListCard.remove();
+        }
+        const staffCard = document.createElement("div");
+        staffCard.className =
+          "staff-card bg-[#242b4e] p-3 rounded-lg flex items-center justify-between";
+        staffCard.draggable = true;
+        staffCard.dataset.staffId = staffId;
+        staffCard.innerHTML = `
+      <div class="flex items-center gap-3">
+      ${
+        staff.photo
+          ? `<img src="${staff.photo}" class="w-8 h-8 rounded-full object-cover">`
+          : `<div class="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+      ${staff.name.charAt(0)}
+      </div>`
+      }
+      <div>
+      <div class="font-medium">${staff.name}</div>
+      <div class="text-sm text-gray-400">${staff.role}</div>
+      </div>
+      </div>
+      <button onclick="event.stopPropagation(); deleteStaff(${staff.id})" class="text-gray-400 hover:text-red-500">
+      <i class="ri-delete-bin-line"></i>
+      </button>
+      `;
+        zone.appendChild(staffCard);
+        staffCard.addEventListener("dragstart", handleDragStart);
+        staffCard.addEventListener("dragend", handleDragEnd);
+      }
+      // Modal functions
+      function showAddStaffModal() {
+        document.getElementById("addStaffModal").style.display = "flex";
+      }
+      function hideAddStaffModal() {
+        document.getElementById("addStaffModal").style.display = "none";
+      }
+      // Add new staff
+      document.getElementById("staffPhoto").addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            document.getElementById("photoPreview").style.backgroundImage =
+              `url(${e.target.result})`;
+            document.getElementById("photoPreview").classList.remove("hidden");
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      document
+        .getElementById("addStaffForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const name = document.getElementById("staffName").value;
+          const role = document.getElementById("staffRole").value;
+          const photoInput = document.getElementById("staffPhoto");
+          const photoPreview = document.getElementById("photoPreview");
+          let photo = null;
+          if (photoPreview.style.backgroundImage) {
+            photo = photoPreview.style.backgroundImage.slice(5, -2);
+          }
+          const newStaff = {
+            id: staffMembers.length + 1,
+            name: name,
+            role: role,
+            photo: photo,
+            assigned: false,
+          };
+          staffMembers.push(newStaff);
+          renderStaffList();
+          setupDragAndDrop();
+          hideAddStaffModal();
+          this.reset();
+          photoPreview.style.backgroundImage = "";
+          photoPreview.classList.add("hidden");
+        });
+      // Delete staff
+      function deleteStaff(id) {
+        if (isLocked) {
+          alert("Planning is locked. Unlock it first.");
+          return;
+        }
+        if (confirm("Are you sure you want to delete this operator permanently?")) {
+          staffMembers = staffMembers.filter((staff) => staff.id !== id);
+          const staffCard = document.querySelector(`[data-staff-id="${id}"]`);
+          if (staffCard) {
+            staffCard.remove();
+          }
+          const availableStaffCard = document.querySelector(
+            `#staffList [data-staff-id="${id}"]`,
+          );
+          if (availableStaffCard) {
+            availableStaffCard.remove();
+          }
+          setupDragAndDrop();
+        }
+      }
+      // Toggle sections
+      function toggleSection(sectionId) {
+        const section = document.getElementById(sectionId);
+        section.classList.toggle("expanded");
+        // Re-setup drag and drop after toggling to ensure functionality
+        setTimeout(() => {
+          setupDragAndDrop();
+        }, 300); // Wait for transition to complete
+      }
+      // Initialize the page
+      init();
+    </script>
+  </body>
+</html>
