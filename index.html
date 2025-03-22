@@ -81,21 +81,9 @@
           CV / NS Planning Board
         </h1>
         <div class="flex items-center gap-4 flex-1 justify-end">
-          <button
-            onclick="showHistoryModal()"
-            class="px-4 py-2 rounded-button bg-secondary flex items-center gap-2"
-          >
-            <i class="ri-history-line"></i>
-            <span>History</span>
-          </button>
           <div class="flex items-center gap-2">
-            <span
-              id="connectionStatus"
-              class="w-2 h-2 bg-red-500 rounded-full"
-            ></span>
-            <span id="connectionText" class="text-sm text-gray-400"
-              >Connecting...</span
-            >
+            <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span class="text-sm text-gray-400">Live Updates</span>
           </div>
           <div id="clock" class="text-xl font-mono"></div>
         </div>
@@ -366,26 +354,6 @@
         </form>
       </div>
     </div>
-    <!-- History Modal -->
-    <div
-      id="historyModal"
-      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center"
-    >
-      <div
-        class="bg-[#1e2444] p-6 rounded-lg w-[600px] max-h-[80vh] flex flex-col"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold">Planning History</h3>
-          <button
-            onclick="hideHistoryModal()"
-            class="text-gray-400 hover:text-white"
-          >
-            <i class="ri-close-line text-xl"></i>
-          </button>
-        </div>
-        <div id="historyList" class="flex-1 overflow-y-auto space-y-2"></div>
-      </div>
-    </div>
     <!-- Add Staff Modal -->
     <div
       id="addStaffModal"
@@ -452,43 +420,6 @@
       ];
       let isLocked = false;
       const PLANNING_PASSWORD = "CVNS2025";
-      let planningHistory = [];
-      const ws = new WebSocket("wss://api.readdy.ai/ws/planning");
-      ws.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        if (data.type === "update_staff") {
-          staffMembers = data.staffMembers;
-          renderStaffList();
-          setupDragAndDrop();
-        } else if (data.type === "update_history") {
-          planningHistory = data.history;
-          if (document.getElementById("historyModal").style.display === "flex") {
-            renderHistory();
-          }
-        }
-      };
-      function broadcastUpdate() {
-        ws.send(
-          JSON.stringify({
-            type: "update_staff",
-            staffMembers: staffMembers,
-          }),
-        );
-      }
-      function addToHistory(action) {
-        const historyItem = {
-          action,
-          timestamp: new Date().toISOString(),
-          user: "Anonymous User",
-        };
-        planningHistory.unshift(historyItem);
-        ws.send(
-          JSON.stringify({
-            type: "update_history",
-            history: planningHistory,
-          }),
-        );
-      }
       // Initialize the page
       function init() {
         renderStaffList();
@@ -496,45 +427,6 @@
         updateClock();
         setInterval(updateClock, 1000);
         setupModals();
-        setupWebSocket();
-      }
-      function setupWebSocket() {
-        ws.onopen = function () {
-          document.getElementById("connectionStatus").classList.remove("bg-red-500");
-          document.getElementById("connectionStatus").classList.add("bg-green-500");
-          document.getElementById("connectionText").textContent = "Connected";
-        };
-        ws.onclose = function () {
-          document
-            .getElementById("connectionStatus")
-            .classList.remove("bg-green-500");
-          document.getElementById("connectionStatus").classList.add("bg-red-500");
-          document.getElementById("connectionText").textContent = "Disconnected";
-          setTimeout(setupWebSocket, 5000);
-        };
-      }
-      function showHistoryModal() {
-        document.getElementById("historyModal").style.display = "flex";
-        renderHistory();
-      }
-      function hideHistoryModal() {
-        document.getElementById("historyModal").style.display = "none";
-      }
-      function renderHistory() {
-        const historyList = document.getElementById("historyList");
-        historyList.innerHTML = planningHistory
-          .map(
-            (item) => `
-          <div class="bg-[#242b4e] p-3 rounded-lg">
-            <div class="flex items-center justify-between">
-              <span class="text-gray-400">${new Date(item.timestamp).toLocaleString()}</span>
-              <span class="text-sm text-gray-400">${item.user}</span>
-            </div>
-            <div class="mt-1">${item.action}</div>
-          </div>
-        `,
-          )
-          .join("");
       }
       function setupModals() {
         document
@@ -603,8 +495,6 @@
             card.remove();
           });
           renderStaffList();
-          addToHistory("Reset planning board");
-          broadcastUpdate();
         }
       }
       // Render staff list
@@ -672,13 +562,6 @@
           alert("Planning is locked. Unlock it first.");
           return;
         }
-        const staffId = parseInt(e.dataTransfer.getData("text/plain"));
-        const staff = staffMembers.find((s) => s.id === staffId);
-        const zone = e.target.closest(".drag-zone");
-        if (!staff || !zone) return;
-        addToHistory(
-          `Moved ${staff.name} to ${zone.querySelector(".bg-[#1e2444]").textContent}`,
-        );
         const zone = e.target.closest(".drag-zone");
         zone.classList.remove("drag-over");
         const staffId = parseInt(e.dataTransfer.getData("text/plain"));
@@ -756,7 +639,6 @@
           if (photoPreview.style.backgroundImage) {
             photo = photoPreview.style.backgroundImage.slice(5, -2);
           }
-          addToHistory(`Added new staff member: ${name} (${role})`);
           const newStaff = {
             id: staffMembers.length + 1,
             name: name,
@@ -778,9 +660,6 @@
           alert("Planning is locked. Unlock it first.");
           return;
         }
-        const staff = staffMembers.find((s) => s.id === id);
-        if (!staff) return;
-        addToHistory(`Removed ${staff.name} from planning`);
         if (confirm("Are you sure you want to delete this operator permanently?")) {
           staffMembers = staffMembers.filter((staff) => staff.id !== id);
           const staffCard = document.querySelector(`[data-staff-id="${id}"]`);
