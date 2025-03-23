@@ -534,7 +534,7 @@ draggable="true" data-staff-id="${staff.id}">
 <div class="flex items-center gap-3" onclick="showStaffCard(${staff.id})">
 ${staff.photo
 ? `<img src="${staff.photo}" class="w-11 h-11 rounded-full object-cover cursor-pointer">`
-: `<div class="w-11 h-11 bg-secondary rounded-full flex items-center justify-center cursor-pointer">
+: `<div class="w-11 h-11 bg-secondary rounded-full flex items-center justify-center cursor-pointer" onclick="showStaffDetails(${staff.id})">
 ${staff.name.charAt(0)}
 </div>`
 }
@@ -685,21 +685,6 @@ function handleDrop(e) {
 e.preventDefault();
 if (isLocked) {
 alert('Planning is locked. Unlock it first.');
-return;
-}
-const zone = e.target.closest('.drag-zone');
-if (!zone) return;
-// If dropping back to staff list
-if (zone.id === 'staffList') {
-const staffId = parseInt(e.dataTransfer.getData('text/plain'));
-const staff = staffMembers.find(s => s.id === staffId);
-if (!staff) return;
-const existingCard = document.querySelector(`[data-staff-id="${staffId}"]`);
-if (existingCard) {
-existingCard.remove();
-staff.assigned = false;
-renderStaffList();
-}
 return;
 }
 // Update all zones' productivity after a drop
@@ -878,7 +863,7 @@ setupDragAndDrop();
 }, 300); // Wait for transition to complete
 }
 // Initialize the page
-init();
+init();	
 </script>
 <!-- Staff Card Modal -->
 <div id="staffCardModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
@@ -895,3 +880,5 @@ init();
 </div>
 </body>
 </html>
+
+ 
